@@ -478,6 +478,8 @@
 
   <div class="main">
     <div class="filterbar">
+      <div class="fld"><span class="cap">Centre</span>
+        <select class="ctrl" id="selCentre" onchange="onCentre()"></select></div>
       <div class="fld"><span class="cap">Mentor</span>
         <select class="ctrl" id="selMentor" onchange="onMentor()"></select></div>
       <div class="fld"><span class="cap">Batches</span>
@@ -511,7 +513,7 @@ function secQCount(h,k){let mx=0;const re=new RegExp('^section_'+k+'_questions_(
 function isSimSheet(h){return h['ims_pin']!=null&&h['section_1_marks_obtained']!=null;}
 const SECMIN=40; // minutes per section (CAT hard cap)
 let MASTER=null,TESTS=null,SIM=[],STUD={},QTYPE={};
-let state={mentor:'ALL',batches:new Set(),sims:new Set(),boardMode:'overall'};
+let state={centre:'ALL',mentor:'ALL',batches:new Set(),sims:new Set(),boardMode:'overall'};
 
 /* ---------- file load ---------- */
 ['dropMaster','dropTests','dropTags'].forEach(id=>{const el=document.getElementById(id);if(!el)return;
@@ -539,12 +541,12 @@ function median(a){if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);const m
 function build(){
   const ms=MASTER.Sheets[MASTER.SheetNames[0]];
   const mr=XLSX.utils.sheet_to_json(ms,{header:1,raw:true,defval:null});const mh=hmap(mr);
-  const cP=mh['IMS Pin'],cN=mh['Name'],cB=mh['Batch'],cM=mh['MENTOR'],cC=mh['College'];
+  const cP=mh['IMS Pin'],cN=mh['Name'],cB=mh['Batch'],cM=mh['MENTOR'],cC=mh['College'],cCe=mh['Centre'];
   STUD={};let droppedJunk=0,masterRows=0;
   for(let r=1;r<mr.length;r++){const row=mr[r];if(!row)continue;let pin=S(row[cP]);if(!pin&&!S(row[cN]))continue;masterRows++;
     if(!(pin.startsWith('IMS')||pin.startsWith('STU'))){droppedJunk++;continue;}
     let mentor=S(row[cM]);if(pin===FIX_PIN)mentor=FIX_MENTOR;
-    STUD[pin]={pin,name:S(row[cN]),batch:S(row[cB]),mentor,college:S(row[cC]),perSim:{}};}
+    STUD[pin]={pin,name:S(row[cN]),batch:S(row[cB]),mentor,college:S(row[cC]),centre:S(row[cCe]),perSim:{}};}
 
   SIM=[];QTYPE={};const ignored=[];const unmatched=new Set();
   TESTS.SheetNames.forEach(sn=>{
@@ -614,16 +616,35 @@ function renderLoadBanner(){const L=LOADINFO;const el=document.getElementById('l
     (L.ignored.length?'<div class="seg2">\u26a0 ignored tabs: '+L.ignored.join(', ')+'</div>':'')+
     '<button class="x" onclick="this.parentNode.style.display=\'none\'">\u00d7</button>';
 }
-function mentorList(){return [...new Set(Object.values(STUD).map(s=>s.mentor))].filter(Boolean).sort();}
-function batchesFor(m){let v=Object.values(STUD);if(m!=='ALL')v=v.filter(s=>s.mentor===m);return [...new Set(v.map(s=>s.batch))].filter(Boolean).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
-function mentorOfBatch(b){const s=Object.values(STUD).find(x=>x.batch===b);return s?s.mentor:'';}
+function centreList(){return [...new Set(Object.values(STUD).map(s=>s.centre))].filter(Boolean).sort();}
+function studentsInCentre(){return state.centre==='ALL'?Object.values(STUD):Object.values(STUD).filter(s=>s.centre===state.centre);}
+function mentorList(){return [...new Set(studentsInCentre().map(s=>s.mentor))].filter(Boolean).sort();}
+function batchesFor(m){let v=studentsInCentre();if(m!=='ALL')v=v.filter(s=>s.mentor===m);return [...new Set(v.map(s=>s.batch))].filter(Boolean).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
+function mentorOfBatch(b){const s=studentsInCentre().find(x=>x.batch===b);return s?s.mentor:'';}
 
 function initFilters(){
+  const sc=document.getElementById('selCentre');
+  const cl=centreList();
+  if(sc){
+    sc.innerHTML=(cl.length>1?'<option value="ALL">All centres</option>':'')+cl.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+    sc.style.display=cl.length>1?'':'none';
+    sc.closest('.fld').style.display=cl.length>1?'':'none';
+    state.centre=cl.length>1?'ALL':(cl[0]||'ALL');
+    sc.value=state.centre;
+  }
   const sm=document.getElementById('selMentor');
   sm.innerHTML='<option value="ALL">All mentors (centre)</option>'+mentorList().map(m=>'<option value="'+m+'">Mentor '+m+'</option>').join('');
   state.sims=new Set();SIM.forEach(s=>{if(!s.takehome)state.sims.add(s.id);});
   buildSimPop('');updateSimLabel();
   rebuildBatch();
+}
+function onCentre(){
+  state.centre=document.getElementById('selCentre').value;
+  state.mentor='ALL';
+  const sm=document.getElementById('selMentor');
+  sm.innerHTML='<option value="ALL">All mentors (centre)</option>'+mentorList().map(m=>'<option value="'+m+'">Mentor '+m+'</option>').join('');
+  rebuildBatch();
+  renderAll();
 }
 function rebuildBatch(){const bs=batchesFor(state.mentor);state.batches=new Set(bs);buildMSPop('');updateMSLabel();}
 function buildMSPop(filter){const pop=document.getElementById('msPop');const bs=batchesFor(state.mentor);
@@ -675,7 +696,7 @@ function updateSimLabel(){const lab=document.getElementById('simLabel'),cnt=docu
 function toggleSim(e){e.stopPropagation();const p=document.getElementById('msPop');if(p)p.classList.remove('open');document.getElementById('simPop').classList.toggle('open');}
 
 function inScope(){const bs=batchesFor(state.mentor),all=state.batches.size===bs.length;
-  return Object.values(STUD).filter(s=>(state.mentor==='ALL'||s.mentor===state.mentor)&&(all?true:state.batches.has(s.batch)));}
+  return studentsInCentre().filter(s=>(state.mentor==='ALL'||s.mentor===state.mentor)&&(all?true:state.batches.has(s.batch)));}
 function selSims(){return SIM.filter(s=>state.sims.has(s.id));}
 function proctSims(){return SIM.filter(s=>!s.takehome);}
 /* whole-centre percentile rank for a score in a given SimCAT.
