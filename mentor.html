@@ -702,7 +702,7 @@ function proctSims(){return SIM.filter(s=>!s.takehome);}
 /* whole-centre percentile rank for a score in a given SimCAT.
    Denominator = every master student who has a score in that test, ignoring the mentor/batch filter,
    so a student's number is stable as you change scope. (below + 0.5*ties)/N * 100 — standard percentile rank. */
-function centrePctile(simId,score){if(score==null)return null;const a=[];Object.values(STUD).forEach(s=>{const r=s.perSim[simId];if(r&&r.score!=null)a.push(r.score);});if(!a.length)return null;let below=0,eq=0;for(const x of a){if(x<score)below++;else if(x===score)eq++;}return (below+0.5*eq)/a.length*100;}
+function centrePctile(simId,score){if(score==null)return null;const a=[];studentsInCentre().forEach(s=>{const r=s.perSim[simId];if(r&&r.score!=null)a.push(r.score);});if(!a.length)return null;let below=0,eq=0;for(const x of a){if(x<score)below++;else if(x===score)eq++;}return (below+0.5*eq)/a.length*100;}
 function taggedSims(){return selSims().filter(s=>QTAGS[s.id]);}
 /* Paper maxima differ across tests (SC1-5 = 204, SC6 = 198 because DILR dropped to 20 Q).
    A single hardcoded denominator is therefore wrong. These return an honest label:
@@ -760,7 +760,7 @@ function bNoise(){return bState.basis==='pct'?2.0:2.0;} // below this, a rank mo
 /* group students -> per-batch, per-SimCAT means (everyone who appeared in that test) */
 function bCollect(sims){
   const byBatch={},strength={};
-  Object.values(STUD).forEach(s=>{if(!s.batch)return;strength[s.batch]=(strength[s.batch]||0)+1;(byBatch[s.batch]=byBatch[s.batch]||[]).push(s);});
+  studentsInCentre().forEach(s=>{if(!s.batch)return;strength[s.batch]=(strength[s.batch]||0)+1;(byBatch[s.batch]=byBatch[s.batch]||[]).push(s);});
   const out={};
   Object.keys(byBatch).forEach(b=>{
     const studs=byBatch[b];
@@ -1041,7 +1041,7 @@ function bMentorTable(sims){
   const ms=mentorList();if(!ms.length)return '';
   const per={};
   ms.forEach(m=>{
-    const studs=Object.values(STUD).filter(s=>s.mentor===m);
+    const studs=studentsInCentre().filter(s=>s.mentor===m);
     const o={m,strength:studs.length,sims:{},batches:batchesFor(m).length};
     const pool={mk:[],pc:[],sec:SEC.map(()=>({mk:[],pc:[]}))};
     sims.forEach(sim=>{const mk=[],pc=[],sm=SEC.map(()=>({mk:[],pc:[]}));
@@ -1588,7 +1588,7 @@ function renderTopics(scope){
   if(!tagsLoaded()){el.innerHTML=html+'<div class="card"><div class="nodata">No question tags loaded. Load <b>tags.json</b> on the start screen (third slot).</div></div>';return;}
   if(!sims.length){el.innerHTML=html+'<div class="card"><div class="nodata">No tagged SimCAT in scope.</div></div>';return;}
   if(!scope.length){el.innerHTML=html+'<div class="card"><div class="nodata">No students in this selection.</div></div>';return;}
-  const me=diagAgg(scope,sims), centre=diagAgg(Object.values(STUD),sims);
+  const me=diagAgg(scope,sims), centre=diagAgg(studentsInCentre(),sims);
   topLossCache=typeLossMap(scope,sims);
   html+='<div class="insightbox" style="margin-bottom:14px"><b>Two failure modes, two different fixes.</b> <span class="vchip v-priority">Grinding a loser</span> \u2014 the group keeps attempting a type and keeps losing: teach the technique. <span class="vchip v-avoid">Avoiding a sitter</span> \u2014 the group skips a type the centre converts: build the confidence. Rows are ranked by <b>marks lost per head per test</b>, so the top row is your best teaching hour'+(isCentre?'':' \u00b7 centre comparison shown beside')+'.</div>';
   /* quadrant map over all types */
@@ -1625,7 +1625,7 @@ function topHead(col,showGap,extra){
 function showGapNow(){return !(state.mentor==='ALL'&&state.batches.size===batchesFor('ALL').length);}
 function lossOf(bucket,label){return (topLossCache&&topLossCache[bucket+'|'+label])||0;}
 function topQA(scope){
-  const sims=taggedSims();const me=diagAgg(scope,sims),centre=diagAgg(Object.values(STUD),sims);const sg=showGapNow();
+  const sims=taggedSims();const me=diagAgg(scope,sims),centre=diagAgg(studentsInCentre(),sims);const sg=showGapNow();
   const areas=Object.keys(me).filter(k=>k.indexOf('QA#')===0).map(k=>k.slice(3));
   const chRows=[];
   areas.forEach(ar=>Object.keys(me).filter(k=>k.indexOf('QAc#'+ar+'>')===0).forEach(k=>{
@@ -1635,7 +1635,7 @@ function topQA(scope){
   return '<div class="dcard"><div class="dh"><h3>Quant \u2014 chapters</h3><span class="ss">ranked by marks lost per head per test</span></div><div class="tblwrap"><table class="dtable">'+topHead('Chapter',sg)+'<tbody>'+(rows||'<tr><td colspan="8" class="nodata">No QA data.</td></tr>')+'</tbody></table></div></div>';
 }
 function topDILR(scope){
-  const sims=taggedSims();const me=diagAgg(scope,sims),centre=diagAgg(Object.values(STUD),sims);const sg=showGapNow();
+  const sims=taggedSims();const me=diagAgg(scope,sims),centre=diagAgg(studentsInCentre(),sims);const sg=showGapNow();
   const bs={};scope.forEach(s=>{const o=setOutcomes(s,sims);Object.keys(o).forEach(ar=>{const B=bs[ar]=bs[ar]||{entered:0,cracked:0};B.entered+=o[ar].entered;B.cracked+=o[ar].cracked;});});
   const arr=Object.keys(me).filter(k=>k.indexOf('DL#')===0).map(k=>({label:k.slice(3),me:me[k],ce:centre[k],loss:lossOf('DILR',k.slice(3))})).sort((a,b)=>b.loss-a.loss);
   const rows=arr.map(o=>{const B=bs[o.label]||{entered:0,cracked:0};const cr=B.entered?Math.round(100*B.cracked/B.entered):null;
@@ -1643,7 +1643,7 @@ function topDILR(scope){
   return '<div class="dcard"><div class="dh"><h3>DI-LR \u2014 by set archetype</h3><span class="ss">ranked by marks lost \u00b7 \u201ccracked\u201d = \u226570% of set solved</span></div><div class="tblwrap"><table class="dtable">'+topHead('Set archetype',sg,'<th>Sets entered</th>')+'<tbody>'+(rows||'<tr><td colspan="9" class="nodata">No DI-LR data.</td></tr>')+'</tbody></table></div></div>';
 }
 function topVARC(scope){
-  const sims=taggedSims();const me=diagAgg(scope,sims),centre=diagAgg(Object.values(STUD),sims);const sg=showGapNow();
+  const sims=taggedSims();const me=diagAgg(scope,sims),centre=diagAgg(studentsInCentre(),sims);const sg=showGapNow();
   const mk=(prefix,bucket,title,col)=>{const arr=Object.keys(me).filter(k=>k.indexOf(prefix)===0).map(k=>({label:k.slice(3),me:me[k],ce:centre[k],loss:lossOf(bucket,k.slice(3))})).sort((a,b)=>b.loss-a.loss);
     return '<div class="dsub">'+title+'</div><table class="dtable">'+topHead(col,sg)+'<tbody>'+(arr.map(o=>'<tr>'+qRow(o.label,o.me,o.ce,o.loss,sg)+'</tr>').join('')||'<tr><td colspan="8" class="nodata">No data.</td></tr>')+'</tbody></table>';};
   return '<div class="dcard"><div class="dh"><h3>VARC \u2014 RC question-types &amp; VA formats</h3><span class="ss">ranked by marks lost per head per test</span></div><div class="tblwrap">'+mk('RC#','RC','Reading comprehension \u2014 by question-type','Question-type')+mk('VA#','VA','Verbal ability \u2014 by format','Format')+'</div></div>';
@@ -1773,7 +1773,7 @@ function draftNote(stu,sims,centre,centreTime){
 function draftNoteInto(pin){
   const stu=STUD[pin];if(!stu)return;
   const sims=taggedSims();
-  const centre=diagAgg(Object.values(STUD),sims), centreTime=timeAgg(Object.values(STUD),sims);
+  const centre=diagAgg(studentsInCentre(),sims), centreTime=timeAgg(studentsInCentre(),sims);
   const txt=draftNote(stu,sims,centre,centreTime);
   patNotes[pin]=txt;
   const ta=document.getElementById('patNote');if(ta)ta.value=txt;
@@ -1805,8 +1805,8 @@ function renderPatterns(scope){
   const sims=taggedSims();
   if(!tagsLoaded()){el.innerHTML=html+'<div class="card"><div class="nodata">No question tags loaded. Load <b>tags.json</b> on the start screen (third slot) to enable this view.</div></div>';return;}
   if(!sims.length){el.innerHTML=html+'<div class="card"><div class="nodata">No tagged SimCAT in scope. Tick SimCAT 1, 2 or 3 in the scope bar above.</div></div>';return;}
-  const centre=diagAgg(Object.values(STUD),sims);
-  const centreTime=timeAgg(Object.values(STUD),sims);
+  const centre=diagAgg(studentsInCentre(),sims);
+  const centreTime=timeAgg(studentsInCentre(),sims);
   const rows=scope.map(s=>({s,...studentSeverities(s,centre,sims)})).filter(r=>r.seen>0);
   rows.sort((a,b)=>b.prio-a.prio || (a.overall||0)-(b.overall||0));
   if(!patState.stu||!rows.find(r=>r.s.pin===patState.stu))patState.stu=rows.length?rows[0].s.pin:null;
@@ -1924,8 +1924,8 @@ function planTimeRule(m,c,v,secName){
 }
 
 function buildPlan(stu, sims){
-  const me=diagAgg([stu],sims), ce=diagAgg(Object.values(STUD),sims);
-  const meT=timeAgg([stu],sims), ceT=timeAgg(Object.values(STUD),sims);
+  const me=diagAgg([stu],sims), ce=diagAgg(studentsInCentre(),sims);
+  const meT=timeAgg([stu],sims), ceT=timeAgg(studentsInCentre(),sims);
   const so=setOutcomes(stu,sims);
   const parts=sims.filter(s=>stu.perSim[s.id]).length||1;
 
@@ -2168,8 +2168,8 @@ function drawPlan(doc, stu, sims, ctx){
 
 function buildStudentDoc(stu, note){
   const sims=taggedSims();
-  const me=diagAgg([stu],sims), centre=diagAgg(Object.values(STUD),sims);
-  const meT=timeAgg([stu],sims), cenT=timeAgg(Object.values(STUD),sims);
+  const me=diagAgg([stu],sims), centre=diagAgg(studentsInCentre(),sims);
+  const meT=timeAgg([stu],sims), cenT=timeAgg(studentsInCentre(),sims);
   const parts=sims.filter(s=>stu.perSim[s.id]).length||1;
   const C={blue:[10,61,143],blueL:[231,238,251],ink:[19,33,61],muted:[102,120,146],faint:[147,162,184],
     line:[224,231,243],orange:[247,144,30],orangeL:[255,244,227],
