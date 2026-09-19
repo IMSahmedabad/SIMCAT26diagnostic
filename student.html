@@ -1796,11 +1796,14 @@ function renderPatterns(scope){
       '<span class="bmini">'+['QA','DILR','VARC'].map(sec=>'<i class="sq-'+r.sev[sec]+'" title="'+sec+': '+r.sev[sec]+'">'+sqLetter[sec]+'</i>').join('')+'</span>'+
       '<span class="bov">'+(r.overall==null?'\u2014':Math.round(r.overall)+'%')+'</span></div>').join('')+'</div>');
 
-  const detail = patState.stu ? patDetail(rows.find(r=>r.s.pin===patState.stu).s, centre, sims, centreTime) :
-    '<div class="card"><div class="nodata">Select a student.</div></div>';
+  const selRow = patState.stu ? rows.find(r=>r.s.pin===patState.stu) : null;
+  const detail = selRow ? patDetail(selRow.s, centre, sims, centreTime) :
+    (patState.stu && STUD[patState.stu] ?
+      '<div class="card"><div class="nodata">'+(window.STUDENT_MODE?'You haven’t attempted questions in any tagged SimCAT yet, so there’s no diagnostic to show. Once you sit a tagged SimCAT, check back here.':'This student hasn’t attempted questions in any tagged SimCAT yet.')+'</div></div>' :
+      '<div class="card"><div class="nodata">Select a student.</div></div>');
 
   html+='<div class="insightbox" style="margin-bottom:14px">'+(window.STUDENT_MODE?'<b>How to read this.</b> ':'<b>Pick a student on the left.</b> ')+'Every type counts <b>all questions you saw</b> across the tagged SimCATs \u2014 <b>Tried</b> shows how many of those you attempted, <b>You</b> is your accuracy when you did try, beside the <b>centre\u2019s</b> accuracy. A low score where the centre scores high is a personal gap to drill; a low score where the centre is also low is a hard type; attempting almost none of a type the centre handles is avoidance. <span class="vchip v-priority">Priority gap</span> <span class="vchip v-weak">Needs work</span> <span class="vchip v-avoid">Avoids</span> <span class="vchip v-par">On par</span> <span class="vchip v-strong">Strength</span> <span class="vchip v-thin">Thin data</span> (under '+VD_MINSEEN+' seen).</div>';
-  const composer = !patState.stu ? '' : (window.STUDENT_MODE ?
+  const composer = (!patState.stu || (window.STUDENT_MODE && !selRow)) ? '' : (window.STUDENT_MODE ?
     ('<div class="stuhead"><div></div><button class="dlbtn" onclick="exportStudentPDF()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg>Download my diagnostic (PDF)</button></div>')
     :
     ('<div class="notebox">'+
