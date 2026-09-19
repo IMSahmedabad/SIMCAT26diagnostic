@@ -484,15 +484,15 @@
           <div class="mspop" id="simPop"></div></div></div>
       <div class="scope-chip"><b id="scopeN">0</b><span id="scopeLbl">in view</span></div>
     </div>
-    <div id="loadbanner"></div>
-    <div class="view on" id="v-overview"></div>
+    <div id="loadbanner" style="display:none"></div>
+    <div class="view" id="v-overview"></div>
     <div class="view" id="v-roster"></div>
     <div class="view" id="v-board"></div>
     <div class="view" id="v-attend"></div>
     <div class="view" id="v-batches"></div>
     <div class="view" id="v-leaks"></div>
     <div class="view" id="v-topics"></div>
-    <div class="view" id="v-patterns"></div>
+    <div class="view on" id="v-patterns"></div>
     <div class="view" id="v-howto"></div>
   </div>
 </div>
@@ -2573,14 +2573,24 @@ function studentLogin(){
     build();
     applyStudentMode();
   }).catch(e=>{
-    document.getElementById('loader').innerHTML = '<div class="loadhead"><h2>Could not load data</h2></div><p class="lead">'+e.message+'</p>';
+    document.getElementById('app').style.display='none';
+    document.getElementById('loader').style.display='block';
+    document.getElementById('loader').innerHTML = '<div class="loadhead"><h2>Could not load your diagnostic</h2></div><p class="lead">Something went wrong while building your report: '+e.message+'<br><br>Please refresh and try again, or let your mentor know.</p>';
+    console.error('student portal error:', e);
   });
 }
 function applyStudentMode(){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
-  const patView = document.getElementById('v-patterns'); if(patView) patView.classList.add('on');
-  patState.stu = window.LOGIN_STU;
-  renderPatterns(inScope());
+  try{
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    const patView = document.getElementById('v-patterns'); if(patView) patView.classList.add('on');
+    patState.stu = window.LOGIN_STU;
+    renderPatterns(inScope());
+  }catch(e){
+    document.getElementById('app').style.display='none';
+    document.getElementById('loader').style.display='block';
+    document.getElementById('loader').innerHTML = '<div class="loadhead"><h2>Could not load your diagnostic</h2></div><p class="lead">Something went wrong while rendering your report: '+e.message+'<br><br>Please refresh and try again, or let your mentor know.</p>';
+    console.error('student portal render error:', e);
+  }
 }
 </script>
 </body>
