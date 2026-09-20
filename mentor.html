@@ -590,12 +590,13 @@ function build(){
       arr.forEach(o=>{const hiR=o.aRate>=mR,hiA=o.acc>=mA;o.type=hiR?(hiA?'bank':'trap'):(hiA?'spec':'hard');});
       QTYPE[sim.id][s.k]=arr;});
   });
-  LOADINFO={sims:SIM.map(s=>s.label+(s.takehome?' (TH)':'')),ignored,students:Object.keys(STUD).length,droppedJunk,unmatched:unmatched.size,masterRows};
+  const visibleStudentCount=Object.values(STUD).filter(s=>s.centre!=='Test Series').length;
+  LOADINFO={sims:SIM.map(s=>s.label+(s.takehome?' (TH)':'')),ignored,students:visibleStudentCount,droppedJunk,unmatched:unmatched.size,masterRows};
 
   initFilters();
   document.getElementById('loader').style.display='none';
   document.getElementById('app').style.display='flex';
-  document.getElementById('pillKids').textContent=Object.keys(STUD).length+' students loaded';
+  document.getElementById('pillKids').textContent=visibleStudentCount+' students loaded';
   renderLoadBanner();
   renderAll();
 }
@@ -616,8 +617,8 @@ function renderLoadBanner(){const L=LOADINFO;const el=document.getElementById('l
     (L.ignored.length?'<div class="seg2">\u26a0 ignored tabs: '+L.ignored.join(', ')+'</div>':'')+
     '<button class="x" onclick="this.parentNode.style.display=\'none\'">\u00d7</button>';
 }
-function centreList(){return [...new Set(Object.values(STUD).map(s=>s.centre))].filter(Boolean).sort();}
-function studentsInCentre(){return state.centre==='ALL'?Object.values(STUD):Object.values(STUD).filter(s=>s.centre===state.centre);}
+function centreList(){return [...new Set(Object.values(STUD).map(s=>s.centre))].filter(Boolean).filter(c=>c!=='Test Series').sort();}
+function studentsInCentre(){const pool=Object.values(STUD).filter(s=>s.centre!=='Test Series');return state.centre==='ALL'?pool:pool.filter(s=>s.centre===state.centre);}
 function mentorList(){return [...new Set(studentsInCentre().map(s=>s.mentor))].filter(Boolean).sort();}
 function batchesFor(m){let v=studentsInCentre();if(m!=='ALL')v=v.filter(s=>s.mentor===m);return [...new Set(v.map(s=>s.batch))].filter(Boolean).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
 function mentorOfBatch(b){const s=studentsInCentre().find(x=>x.batch===b);return s?s.mentor:'';}
