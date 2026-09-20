@@ -1806,7 +1806,9 @@ function renderPatterns(scope){
   const detail = selRow ? patDetail(selRow.s, centre, sims, centreTime) :
     (patState.stu && STUD[patState.stu] ?
       '<div class="card"><div class="nodata">'+(window.STUDENT_MODE?'You haven’t attempted questions in any tagged SimCAT yet, so there’s no diagnostic to show. Once you sit a tagged SimCAT, check back here.':'This student hasn’t attempted questions in any tagged SimCAT yet.')+'</div></div>' :
-      '<div class="card"><div class="nodata">Select a student.</div></div>');
+      (window.STUDENT_MODE && patState.stu ?
+        '<div class="card"><div class="nodata">We couldn’t find your record in this season’s data file yet. This page may not have finished updating — please try again in a few minutes (a hard refresh can help), or let your mentor know if this continues.</div></div>' :
+        '<div class="card"><div class="nodata">Select a student.</div></div>'));
 
   html+='<div class="insightbox" style="margin-bottom:14px">'+(window.STUDENT_MODE?'<b>How to read this.</b> ':'<b>Pick a student on the left.</b> ')+'Every type counts <b>all questions you saw</b> across the tagged SimCATs \u2014 <b>Tried</b> shows how many of those you attempted, <b>You</b> is your accuracy when you did try, beside the <b>centre\u2019s</b> accuracy. A low score where the centre scores high is a personal gap to drill; a low score where the centre is also low is a hard type; attempting almost none of a type the centre handles is avoidance. <span class="vchip v-priority">Priority gap</span> <span class="vchip v-weak">Needs work</span> <span class="vchip v-avoid">Avoids</span> <span class="vchip v-par">On par</span> <span class="vchip v-strong">Strength</span> <span class="vchip v-thin">Thin data</span> (under '+VD_MINSEEN+' seen).</div>';
   const composer = (!patState.stu || (window.STUDENT_MODE && !selRow)) ? '' : (window.STUDENT_MODE ?
